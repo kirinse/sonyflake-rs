@@ -1,5 +1,5 @@
 use crate::{
-    builder::lower_16_bit_private_ip,
+    builder::fake_machine_id,
     error::*,
     sonyflake::{decompose, to_sonyflake_time, Sonyflake, BIT_LEN_SEQUENCE, BIT_LEN_TIME},
 };
@@ -42,7 +42,7 @@ fn test_once() -> Result<(), BoxDynError> {
         panic!("Unexpected time {}", actual_time)
     }
 
-    let machine_id = lower_16_bit_private_ip()? as u64;
+    let machine_id = fake_machine_id()? as u64;
     let actual_machine_id = *parts.get("machine-id").expect("No machine id part");
     assert_eq!(machine_id, actual_machine_id, "Unexpected machine id");
 
@@ -58,7 +58,7 @@ fn test_run_for_10s() -> Result<(), BoxDynError> {
     let mut last_id: u64 = 0;
     let mut max_sequence: u64 = 0;
 
-    let machine_id = lower_16_bit_private_ip()? as u64;
+    let machine_id = fake_machine_id()? as u64;
 
     let initial = to_sonyflake_time(Utc::now());
     let mut current = initial.clone();

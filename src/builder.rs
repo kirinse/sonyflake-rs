@@ -3,11 +3,7 @@ use crate::sonyflake::{
     to_sonyflake_time, Internals, SharedSonyflake, Sonyflake, BIT_LEN_SEQUENCE,
 };
 use chrono::prelude::*;
-use pnet::datalink;
-use std::{
-    net::{IpAddr, Ipv4Addr},
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 /// A builder to build a [`Sonyflake`] generator.
 ///
@@ -77,7 +73,7 @@ impl<'a> Builder<'a> {
                 Err(e) => return Err(Error::MachineIdFailed(e)),
             }
         } else {
-            lower_16_bit_private_ip()?
+            fake_machine_id()?
         };
 
         if let Some(check_machine_id) = self.check_machine_id {
@@ -98,41 +94,6 @@ impl<'a> Builder<'a> {
     }
 }
 
-fn private_ipv4() -> Option<Ipv4Addr> {
-    datalink::interfaces()
-        .iter()
-        .filter(|interface| interface.is_up() && !interface.is_loopback())
-        .map(|interface| {
-            interface
-                .ips
-                .iter()
-                .map(|ip_addr| ip_addr.ip()) // convert to std
-                .find(|ip_addr| match ip_addr {
-                    IpAddr::V4(ipv4) => is_private_ipv4(*ipv4),
-                    IpAddr::V6(_) => false,
-                })
-                .and_then(|ip_addr| match ip_addr {
-                    IpAddr::V4(ipv4) => Some(ipv4), // make sure the return type is Ipv4Addr
-                    _ => None,
-                })
-        })
-        .find(|ip| ip.is_some())
-        .flatten()
-}
-
-fn is_private_ipv4(ip: Ipv4Addr) -> bool {
-    let octets = ip.octets();
-    octets[0] == 10
-        || octets[0] == 172 && (octets[1] >= 16 && octets[1] < 32)
-        || octets[0] == 192 && octets[1] == 168
-}
-
-pub(crate) fn lower_16_bit_private_ip() -> Result<u16, Error> {
-    match private_ipv4() {
-        Some(ip) => {
-            let octets = ip.octets();
-            Ok(((octets[2] as u16) << 8) + (octets[3] as u16))
-        }
-        None => Err(Error::NoPrivateIPv4),
-    }
+pub(crate) fn fake_machine_id() -> Result<u16, Error> {
+    Ok(65535u16)
 }
